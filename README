@@ -1,0 +1,17 @@
+This is a Starcraft replay data extractor written by Glen Robertson.
+
+It uses modified parts of Andras Belicza's Replay Parser to parse replay files, and it uses JNIBWAPI to interface with Starcraft.
+By combining replay file parsing and attribute recording through BWAPI, this extractor is able to get a much more complete picture of the replay than others.
+
+The dataset extracted using this software can be found at https://www.cs.auckland.ac.nz/research/gameai/projects.php
+
+To run:
+0. Install Starcraft and BWAPI 3.7. Have a set of replay files to extract.
+1. Set BWAPI's auto_menu feature to load the replay files.
+2. Set up a MySQL database (version 5.5 was used in testing)
+3. Import the SQL data in starcraft.sql and starcraft-staticdata.sql
+4. Examine the settings in extractorconfig.properties and change as needed
+5. Run ExtractActions - this will go through all the replays in the replay directory (specified in the properties) and extract all of the stored data to the database. If successful there should be no "SEVERE" log messages but there may be some "WARNING" messages about skipping control groups.
+6. Run ChaosLauncher (from BWAPI) as administrator.
+6. Run ExtractStates as administrator - this will connect to Starcraft and run through each replay file in turn, extracting in-game data that is not accessible from parsing replay files.
+7. ExtractStates or Starcraft has crashed? Run keeprunning.sh as administrator - this will attempt to detect when things have crashed and restart them. Note you will need to set the replay folder location in this script as well, and it requires cygwin.

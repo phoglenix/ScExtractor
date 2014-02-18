@@ -1,0 +1,12 @@
+.settings/
+bin/
+logs/
+mapData/
+replays/
+*.tmp
+*.bak
+.classpath
+.project
+*.log
+javabot.log.*
+*.txt
