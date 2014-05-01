@@ -1,6 +1,7 @@
-package jnibwapi.model;
+package jnibwapi;
 
-import jnibwapi.model.Position.Type;
+import jnibwapi.Position.PosType;
+import jnibwapi.types.PlayerType;
 import jnibwapi.types.RaceType;
 import jnibwapi.types.RaceType.RaceTypes;
 import jnibwapi.types.TechType;
@@ -115,9 +116,8 @@ public class Player {
 		return RaceTypes.getRaceType(raceID);
 	}
 	
-	// TODO Should return a PlayerType
-	public int getTypeID() {
-		return typeID;
+	public PlayerType getTypeID() {
+		return PlayerType.getPlayerType(typeID);
 	}
 	
 	/**
@@ -125,7 +125,7 @@ public class Player {
 	 * Positions.Invalid / Positions.None / Positions.Unknown.
 	 */
 	public Position getStartLocation() {
-		return new Position(startLocationX, startLocationY, Type.BUILD);
+		return new Position(startLocationX, startLocationY, PosType.BUILD);
 	}
 	
 	public boolean isSelf() {
@@ -196,21 +196,42 @@ public class Player {
 		return razingScore;
 	}
 	
+	public boolean isResearched(TechType tech) {
+		return researched[tech.getID()];
+	}
+	
+	@Deprecated
 	public boolean isResearched(int techID) {
-		return (researched != null && techID < researched.length) ? researched[techID] : false;
+		return (techID >= 0 && techID < researched.length) ? researched[techID] : false;
 	}
 	
+	public boolean isResearching(TechType tech) {
+		return researching[tech.getID()];
+	}
+	
+	@Deprecated
 	public boolean isResearching(int techID) {
-		return (researching != null && techID < researching.length) ? researching[techID] : false;
+		return (techID >= 0 && techID < researching.length) ? researching[techID] : false;
 	}
 	
+
+	public int getUpgradeLevel(UpgradeType upgrade) {
+		return upgradeLevel[upgrade.getID()];
+	}
+	
+	@Deprecated
 	public int getUpgradeLevel(int upgradeID) {
-		return (upgradeLevel != null && upgradeID < upgradeLevel.length) ?
+		return (upgradeID >= 0 && upgradeID < upgradeLevel.length) ?
 				upgradeLevel[upgradeID] : 0;
 	}
 	
+	public boolean isUpgrading(UpgradeType upgrade) {
+		return upgrading[upgrade.getID()];
+	}
+	
+	@Deprecated
 	public boolean isUpgrading(int upgradeID) {
-		return (upgrading != null && upgradeID < upgrading.length) ? upgrading[upgradeID] : false;
+		return (upgradeID >= 0 && upgradeID < upgrading.length) ? upgrading[upgradeID] : false;
 	}
 	
 	@Override

@@ -1,8 +1,8 @@
-package jnibwapi.model;
+package jnibwapi;
 
 import java.util.Map;
 
-import jnibwapi.model.Position.Type;
+import jnibwapi.Position.PosType;
 
 /**
  * Represents a StarCraft base location.
@@ -13,6 +13,7 @@ public class BaseLocation {
 	
 	public static final int numAttributes = 10;
 	
+	private final Position center;
 	private final Position position;
 	private final Region region;
 	private final int minerals;
@@ -22,11 +23,12 @@ public class BaseLocation {
 	private final boolean startLocation;
 	
 	public BaseLocation(int[] data, int index,  Map<Integer, Region> idToRegion) {
-		index++; // x (unused)
-		index++; // y (unused)
+		int x = data[index++];
+		int y = data[index++];
+		center = new Position(x, y);
 		int tx = data[index++];
 		int ty = data[index++];
-		position = new Position(tx, ty, Type.BUILD);
+		position = new Position(tx, ty, PosType.BUILD);
 		int regionID = data[index++];
 		region = idToRegion.get(regionID);
 		minerals = data[index++];
@@ -36,27 +38,33 @@ public class BaseLocation {
 		startLocation = (data[index++] == 1);
 	}
 	
+	/** The Position of the center of the BaseLocation */
+	public Position getCenter() {
+		return center;
+	}
+	
+	/** The Position of the top left of the BaseLocation */
 	public Position getPosition() {
 		return position;
 	}
 	
 	/** @deprecated use {@link #getPosition()} instead */
-	public int getPositionX() {
+	public int getX() {
 		return position.getPX();
 	}
 	
 	/** @deprecated use {@link #getPosition()} instead */
-	public int getPositionY() {
+	public int getY() {
 		return position.getPY();
 	}
 	
 	/** @deprecated use {@link #getPosition()} instead */
-	public int getPositionTX() {
+	public int getTx() {
 		return position.getBX();
 	}
 	
 	/** @deprecated use {@link #getPosition()} instead */
-	public int getPositionTY() {
+	public int getTy() {
 		return position.getBY();
 	}
 	

@@ -18,11 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import jnibwapi.model.Map;
-import jnibwapi.model.Player;
-import jnibwapi.model.Position;
-import jnibwapi.model.Region;
-import jnibwapi.model.Unit;
 import jnibwapi.types.*;
 import jnibwapi.types.BulletType.BulletTypes;
 import jnibwapi.types.DamageType.DamageTypes;
@@ -52,7 +47,7 @@ import jnibwapi.util.BWColor;
  * Game: {@link http://code.google.com/p/bwapi/wiki/Game}<br>
  * Unit: {@link http://code.google.com/p/bwapi/wiki/Unit}<br>
  */
-public class JNIBWAPI implements IDLookup, NativeUnitCommands {
+public class JNIBWAPI {
 	
 	// load the BWAPI client library
 	static {
@@ -70,6 +65,17 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 		}
 	}
 	
+	private static JNIBWAPI instance = null;
+	
+	/**
+	 * Get a reference to the JNIBWAPI object. Note it will be unusable until the
+	 * {@link #connected()} callback, and all game-related fields may be undefined until the
+	 * {@link #gameStarted()} callback.
+	 */
+	public static JNIBWAPI getInstance() {
+		return instance;
+	}
+	
 	/** callback listener for BWAPI events */
 	private BWAPIEventListener listener;
 	/** whether to use BWTA for map analysis */
@@ -84,6 +90,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	 * @param enableBWTA - whether to use BWTA for map analysis
 	 */
 	public JNIBWAPI(BWAPIEventListener listener, boolean enableBWTA) {
+		instance = this;
 		this.listener = listener;
 		this.enableBWTA = enableBWTA;
 		try {
@@ -111,18 +118,19 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	// game state
 	private int gameFrame = 0;
 	private Map map;
-	private HashMap<Integer, Unit> units = new HashMap<Integer, Unit>();
-	private ArrayList<Unit> playerUnits = new ArrayList<Unit>();
-	private ArrayList<Unit> alliedUnits = new ArrayList<Unit>();
-	private ArrayList<Unit> enemyUnits = new ArrayList<Unit>();
-	private ArrayList<Unit> neutralUnits = new ArrayList<Unit>();
+	private HashMap<Integer, Unit> units = new HashMap<>();
+	private ArrayList<Unit> playerUnits = new ArrayList<>();
+	private ArrayList<Unit> alliedUnits = new ArrayList<>();
+	private ArrayList<Unit> enemyUnits = new ArrayList<>();
+	private ArrayList<Unit> neutralUnits = new ArrayList<>();
+	private ArrayList<Unit> staticNeutralUnits = new ArrayList<>();
 	
 	// player lists
 	private Player self;
 	private Player neutralPlayer;
-	private HashMap<Integer, Player> players = new HashMap<Integer, Player>();
-	private HashSet<Player> allies = new HashSet<Player>();
-	private HashSet<Player> enemies = new HashSet<Player>();
+	private HashMap<Integer, Player> players = new HashMap<>();
+	private HashSet<Player> allies = new HashSet<>();
+	private HashSet<Player> enemies = new HashSet<>();
 	
 	// invokes the main native method
 	private native void startClient(JNIBWAPI jniBWAPI);
@@ -137,6 +145,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	private native int[] getResearchStatus(int playerID);
 	private native int[] getUpgradeStatus(int playerID);
 	private native int[] getAllUnitsData();
+	private native int[] getStaticNeutralUnitsData();
 	private native int[] getRaceTypes();
 	private native String getRaceTypeName(int raceID);
 	private native int[] getUnitTypes();
@@ -180,8 +189,17 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	private native int[] getPolygon(int regionID);
 	private native int[] getBaseLocations();
 	
-	// Native unit commands. These should all be accessed via the Unit class now.
-	// TODO implement these using only canIssueCommand and issueCommand
+	// Unit commands. These should generally be accessed via the Unit class now.
+	private native boolean canIssueCommand(int unitID, int unitCommandTypeID, int targetUnitID, int x, int y, int extra);
+	public boolean canIssueCommand(UnitCommand cmd) {
+		return canIssueCommand(cmd.getUnit().getID(), cmd.getType().getID(), cmd.getTargetUnitID(),
+				cmd.getX(), cmd.getY(), cmd.getExtra());
+	}
+	private native boolean issueCommand(int unitID, int unitCommandTypeID, int targetUnitID, int x, int y, int extra);
+	public boolean issueCommand(UnitCommand cmd) {
+		return issueCommand(cmd.getUnit().getID(), cmd.getType().getID(), cmd.getTargetUnitID(),
+				cmd.getX(), cmd.getY(), cmd.getExtra());
+	}
 	/** @deprecated Use the one in {@link Unit} instead */
 	public native boolean attack(int unitID, int x, int y);
 	/** @deprecated Use the one in {@link Unit} instead */
@@ -314,29 +332,83 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	public boolean isBuildable(Position p, boolean includeBuildings) {
 		return isBuildable(p.getBX(), p.getBY(), includeBuildings);
 	}
-	// TODO use Position instead of x and y
-	public native boolean hasCreep(int tileX, int tileY);
-	public native boolean hasPower(int tileX, int tileY);
-	public native boolean hasPower(int tileX, int tileY, int unitTypeID);
-	public native boolean hasPower(int tileX, int tileY, int tileWidth, int tileHeight);
-	public native boolean hasPower(int tileX, int tileY, int tileWidth, int tileHeight, int unitTypeID);
-	public native boolean hasPowerPrecise(int x, int y);
-	public native boolean hasPath(int fromX, int fromY, int toX, int toY);
-	public native boolean hasPath(int unitID, int targetID);
-	public native boolean hasPath(int unitID, int toX, int toY);
-	public native int[] getLoadedUnits(int unitID);
-	public native int[] getInterceptors(int unitID);
-	public native int[] getLarva(int unitID);
-	public native boolean canBuildHere(int tileX, int tileY, int unitTypeID, boolean checkExplored);
-	public native boolean canBuildHere(int unitID, int tileX, int tileY, int unitTypeID, boolean checkExplored);
-	public native boolean canMake(int unitTypeID);
-	public native boolean canMake(int unitID, int unitTypeID);
-	public native boolean canResearch(int techTypeID);
-	public native boolean canResearch(int unitID, int techTypeID);
-	public native boolean canUpgrade(int upgradeTypeID);
-	public native boolean canUpgrade(int unitID, int upgradeTypeID);
+	private native boolean hasCreep(int tileX, int tileY);
+	public boolean hasCreep(Position p) {
+		return hasCreep(p.getBX(), p.getBY());
+	}
+	private native boolean hasPower(int tileX, int tileY, int unitTypeID);
+	public boolean hasPower(Position p) {
+		return hasPower(p, UnitTypes.None);
+	}
+	public boolean hasPower(Position p, UnitType ut) {
+		return hasPower(p.getBX(), p.getBY(), ut.getID());
+	}
+	private native boolean hasPower(int tileX, int tileY, int tileWidth, int tileHeight, int unitTypeID);
+	public boolean hasPower(Position p, int tileWidth, int tileHeight){
+		return hasPower(p, tileWidth, tileHeight, UnitTypes.None);
+	}
+	public boolean hasPower(Position p, int tileWidth, int tileHeight, UnitType ut) {
+		return hasPower(p.getBX(), p.getBY(), tileWidth, tileHeight, ut.getID());
+	}
+	private native boolean hasPowerPrecise(int x, int y, int unitTypeID);
+	public boolean hasPowerPrecise(Position p) {
+		return hasPowerPrecise(p, UnitTypes.None);
+	}
+	public boolean hasPowerPrecise(Position p, UnitType ut) {
+		return hasPowerPrecise(p.getPX(), p.getPY(), ut.getID());
+	}
+	private native boolean hasPath(int fromX, int fromY, int toX, int toY);
+	public boolean hasPath(Position from, Position to) {
+		return hasPath(from.getPX(), from.getPY(), to.getPX(), to.getPY());
+	}
+	private native boolean hasPath(int unitID, int targetID);
+	public boolean hasPath(Unit u, Unit target) {
+		return hasPath(u.getID(), target.getID());
+	}
+	private native boolean hasPath(int unitID, int toX, int toY);
+	public boolean hasPath(Unit u, Position to) {
+		return hasPath(u.getID(), to.getPX(), to.getPY());
+	}
+	protected native int[] getLoadedUnits(int unitID);
+	protected native int[] getInterceptors(int unitID);
+	protected native int[] getLarva(int unitID);
+	private native boolean canBuildHere(int tileX, int tileY, int unitTypeID, boolean checkExplored);
+	public boolean canBuildHere(Position p, UnitType ut, boolean checkExplored) {
+		return canBuildHere(p.getBX(), p.getBY(), ut.getID(), checkExplored);
+	}
+	private native boolean canBuildHere(int unitID, int tileX, int tileY, int unitTypeID, boolean checkExplored);
+	public boolean canBuildHere(Unit u, Position p, UnitType ut, boolean checkExplored) {
+		return canBuildHere(u == null ? -1 : u.getID(), p.getBX(), p.getBY(), ut.getID(), checkExplored);
+	}
+	private native boolean canMake(int unitTypeID);
+	public boolean canMake(UnitType ut) {
+		return canMake(ut.getID());
+	}
+	private native boolean canMake(int unitID, int unitTypeID);
+	public boolean canMake(Unit u, UnitType ut) {
+		return canMake(u.getID(), ut.getID());
+	}
+	private native boolean canResearch(int techTypeID);
+	public boolean canResearch(TechType tt) {
+		return canResearch(tt.getID());
+	}
+	private native boolean canResearch(int unitID, int techTypeID);
+	public boolean canResearch(Unit u, TechType tt) {
+		return canResearch(u.getID(), tt.getID());
+	}
+	private native boolean canUpgrade(int upgradeTypeID);
+	public boolean canUpgrade(UpgradeType ut) {
+		return canUpgrade(ut.getID());
+	}
+	private native boolean canUpgrade(int unitID, int upgradeTypeID);
+	public boolean canUpgrade(Unit u, UpgradeType ut) {
+		return canUpgrade(u.getID(), ut.getID());
+	}
+	
+	
 	public native void printText(String message);
 	public native void sendText(String message);
+	public native void setLatCom(boolean enabled);
 	public native void setCommandOptimizationLevel(int level);
 	public native boolean isReplay();
 	private native boolean isVisibleToPlayer(int unitID, int playerID);
@@ -346,7 +418,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	public native int getLastError();
 	public native int getRemainingLatencyFrames();
 
-	// Old get___ methods for ID dereferencing no longer needed.
+	// Old get___ methods for ID dereferencing no longer needed (call method body directly).
 	@Deprecated
 	public UnitType getUnitType(int typeID) { return UnitTypes.getUnitType(typeID); }
 	@Deprecated
@@ -370,7 +442,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	@Deprecated
 	public OrderType getOrderType(int orderID) { return OrderTypes.getOrderType(orderID); }
 	
-	// Old ___Types() methods no longer needed
+	// Old ___Types() methods no longer needed (call method body directly).
 	@Deprecated
 	public Collection<UnitType> unitTypes() { return UnitTypes.getAllUnitTypes(); }
 	@Deprecated
@@ -395,9 +467,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	public Collection<OrderType> orderTypes() { return OrderTypes.getAllOrderTypes(); }
 	
 	// ID Lookup Methods (should not usually be needed)
-	@Override
 	public Player getPlayer(int playerID) { return players.get(playerID); }
-	@Override
 	public Unit getUnit(int unitID) { return units.get(unitID); }
 
 	// game state accessors
@@ -412,6 +482,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 	public List<Unit> getAlliedUnits() { return Collections.unmodifiableList(alliedUnits); }
 	public List<Unit> getEnemyUnits() { return Collections.unmodifiableList(enemyUnits); }
 	public List<Unit> getNeutralUnits() { return Collections.unmodifiableList(neutralUnits); }
+	public List<Unit> getStaticNeutralUnits() { return Collections.unmodifiableList(staticNeutralUnits); }
 	
 	public List<Unit> getUnits(Player p) {
 		List<Unit> pUnits = new ArrayList<Unit>();
@@ -423,10 +494,10 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 		return pUnits;
 	}
 	
-	public List<Unit> getUnitsOnTile(int tx, int ty) {
+	public List<Unit> getUnitsOnTile(Position p) {
 		// Often will have 0 or few units on tile
 		List<Unit> units = new ArrayList<Unit>(0);
-		for (int id : getUnitIdsOnTile(tx, ty)) {
+		for (int id : getUnitIdsOnTile(p.getBX(), p.getBY())) {
 			units.add(getUnit(id));
 		}
 		return units;
@@ -454,8 +525,8 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 		int[] unitTypeData = getUnitTypes();
 		for (int index = 0; index < unitTypeData.length; index += UnitType.numAttributes) {
 			int id = unitTypeData[index];
-			int[] requiredUnits = getRequiredUnits(unitTypeData[index]);
-			UnitTypes.getUnitType(id).initialize(unitTypeData, index, getUnitTypeName(id), requiredUnits);
+			UnitTypes.getUnitType(id).initialize(unitTypeData, index, getUnitTypeName(id),
+					getRequiredUnits(id));
 		}
 		
 		// tech types
@@ -539,6 +610,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 		
 		// get region and choke point data
 		File bwtaFile = new File("mapData" + File.separator + map.getHash() + ".jbwta");
+		String mapHash = map.getHash();
 		File mapDir = bwtaFile.getParentFile();
 		if (mapDir != null) {
 			mapDir.mkdirs();
@@ -548,7 +620,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 		int[] regionData = null;
 		int[] chokePointData = null;
 		int[] baseLocationData = null;
-		HashMap<Integer, int[]> polygons = new HashMap<Integer, int[]>();
+		HashMap<Integer, int[]> polygons = new HashMap<>();
 		
 		// run BWTA
 		if (!analyzed) {
@@ -560,6 +632,12 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 			for (int index = 0; index < regionData.length; index += Region.numAttributes) {
 				int id = regionData[index];
 				polygons.put(id, getPolygon(id));
+			}
+			
+			// sometimes BWTA seems to crash on analyse. Make sure we are definitely in the same map
+			if (!mapHash.equals(map.getHash())) {
+				System.err.println("Error: Map changed during analysis! BWTA file not saved.");
+				System.exit(1);
 			}
 			
 			// store the results to a local file (bwta directory)
@@ -715,7 +793,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 			
 			for (int index = 0; index < unitData.length; index += Unit.numAttributes) {
 				int id = unitData[index];
-				Unit unit = new Unit(id, this, this);
+				Unit unit = new Unit(id, this);
 				unit.update(unitData, index);
 				
 				units.put(id, unit);
@@ -732,6 +810,21 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 					neutralUnits.add(unit);
 				}
 			}
+			staticNeutralUnits.clear();
+			unitData = getStaticNeutralUnitsData();
+			for (int index = 0; index < unitData.length; index += Unit.numAttributes) {
+				int id = unitData[index];
+				
+				// Ensure we don't have duplicate units
+				Unit unit = units.get(id);
+				if (unit == null) {
+					unit = new Unit(id, this);
+					unit.update(unitData, index);
+				}
+				
+				staticNeutralUnits.add(unit);
+			}
+			
 			gameFrame = getFrame();
 			loadMapData();
 			
@@ -764,11 +857,11 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 			}
 			// update units
 			int[] unitData = getAllUnitsData();
-			HashSet<Integer> deadUnits = new HashSet<Integer>(units.keySet());
-			ArrayList<Unit> playerList = new ArrayList<Unit>();
-			ArrayList<Unit> alliedList = new ArrayList<Unit>();
-			ArrayList<Unit> enemyList = new ArrayList<Unit>();
-			ArrayList<Unit> neutralList = new ArrayList<Unit>();
+			HashSet<Integer> deadUnits = new HashSet<>(units.keySet());
+			ArrayList<Unit> playerList = new ArrayList<>();
+			ArrayList<Unit> alliedList = new ArrayList<>();
+			ArrayList<Unit> enemyList = new ArrayList<>();
+			ArrayList<Unit> neutralList = new ArrayList<>();
 			
 			for (int index = 0; index < unitData.length; index += Unit.numAttributes) {
 				int id = unitData[index];
@@ -777,7 +870,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 				
 				Unit unit = units.get(id);
 				if (unit == null) {
-					unit = new Unit(id, this, this);
+					unit = new Unit(id, this);
 					units.put(id, unit);
 				}
 				
@@ -867,7 +960,7 @@ public class JNIBWAPI implements IDLookup, NativeUnitCommands {
 					if (param1 == -1)
 						listener.nukeDetect();
 					else
-						listener.nukeDetect(param1, param2);
+						listener.nukeDetect(new Position(param1, param2));
 					break;
 				case UnitDiscover:
 					listener.unitDiscover(param1);

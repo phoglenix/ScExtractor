@@ -1,6 +1,5 @@
-package jnibwapi.model;
+package jnibwapi;
 
-import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -10,8 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import jnibwapi.JNIBWAPI;
-import jnibwapi.model.Position.Type;
+import jnibwapi.Position.PosType;
 import jnibwapi.types.UnitType;
 import jnibwapi.util.BWColor;
 
@@ -41,10 +39,13 @@ public class Map {
 	
 	public Map(int width, int height, String name, String fileName, String hash, int[] heightMap,
 			int[] buildable, int[] walkable) {
-		this.size = new Position(width, height, Type.BUILD);
+		size = new Position(width, height, PosType.BUILD);
 		this.name = name;
 		this.fileName = fileName;
 		this.hash = hash;
+		assert(heightMap != null && heightMap.length == size.getBX() * size.getBY());
+		assert(buildable != null && buildable.length == size.getBX() * size.getBY());
+		assert(walkable != null && walkable.length == size.getWX() * size.getWY());
 		this.heightMap = heightMap;
 		this.buildable = new boolean[buildable.length];
 		this.walkable = new boolean[walkable.length];
@@ -63,15 +64,16 @@ public class Map {
 		for (int wx = 0; wx < size.getWX(); wx++) {
 			for (int wy = 0; wy < size.getWY(); wy++) {
 				lowResWalkable[wx / 4 + width * (wy / 4)] &= isWalkable(
-						new Position(wx, wy, Type.WALK));
+						new Position(wx, wy, PosType.WALK));
 			}
 		}
 	}
 	
 	/** Initialise the map with regions and base locations */
-	public void initialize(int[] regionMapData, int[] regionData,
+	protected void initialize(int[] regionMapData, int[] regionData,
 			HashMap<Integer, int[]> regionPolygons, int[] chokePointData, int[] baseLocationData) {
 		// regionMap
+		assert(regionMapData != null && regionMapData.length == size.getBX() * size.getBY());
 		regionMap = regionMapData;
 		
 		// regions
@@ -130,6 +132,16 @@ public class Map {
 		return size.getBY();
 	}
 	
+	/** @deprecated Width in walk tiles (32px). Use {@link #getSize()} instead. */
+	public int getWalkWidth() {
+		return size.getWX();
+	}
+	
+	/** @deprecated Height in walk tiles (32px). Use {@link #getSize()} instead. */
+	public int getWalkHeight() {
+		return size.getWY();
+	}
+	
 	/** The name of the current map */
 	public String getName() {
 		return name;
@@ -140,6 +152,7 @@ public class Map {
 		return fileName;
 	}
 	
+	/** Returns the sha1 hash of the map file in an alpha-numeric string. */
 	public String getHash() {
 		return hash;
 	}
@@ -150,7 +163,7 @@ public class Map {
 	}
 	
 	public int getGroundHeight(Position p) {
-		if (p.isValid(this)) {
+		if (p.isValid()) {
 			return heightMap[getBuildTileArrayIndex(p)];
 		}
 		else {
@@ -158,9 +171,12 @@ public class Map {
 		}
 	}
 	
-	/** Works only after initialize(). Returns null if the specified position is invalid. */
+	/**
+	 * Works only after initialize(). Returns null if the specified position is invalid. Build tile
+	 * accuracy (so may not precisely agree with region polygons).
+	 */
 	public Region getRegion(Position p) {
-		if (p.isValid(this)) {
+		if (p.isValid()) {
 			return idToRegion.get(regionMap[getBuildTileArrayIndex(p)]);
 		} else {
 			return null;
@@ -168,7 +184,7 @@ public class Map {
 	}
 	
 	public boolean isBuildable(Position p) {
-		if (p.isValid(this)) {
+		if (p.isValid()) {
 			return buildable[getBuildTileArrayIndex(p)];
 		} else {
 			return false;
@@ -176,7 +192,7 @@ public class Map {
 	}
 	
 	public boolean isWalkable(Position p) {
-		if (p.isValid(this)) {
+		if (p.isValid()) {
 			return walkable[p.getWX() + size.getWX() * p.getWY()];
 		} else {
 			return false;
@@ -185,7 +201,7 @@ public class Map {
 	
 	/** Checks whether all 16 walk tiles in a build tile are walkable */
 	public boolean isLowResWalkable(Position p) {
-		if (p.isValid(this)) {
+		if (p.isValid()) {
 			return lowResWalkable[getBuildTileArrayIndex(p)];
 		} else {
 			return false;
@@ -230,7 +246,7 @@ public class Map {
 	public double getGroundDistance(Position start, Position end) {
 		if (!isConnected(start, end))
 			return -1;
-		return aStarSearchDistance(start.getBX(), start.getBY(), end.getBX(), end.getBY());
+		return aStarSearchDistance(start, end);
 	}
 	
 	/**
@@ -249,46 +265,46 @@ public class Map {
 	 * Performs an A* search. Intended to be called from
 	 * {@link #getGroundDistance(int, int, int, int)}. Ported from BWTA.
 	 */
-	private double aStarSearchDistance(int startTx, int startTy, int endTx, int endTy) {
+	private double aStarSearchDistance(Position start, Position end) {
 		// Distance of 10 per build tile, or sqrt(10^2 + 10^2) ~= 14 diagonally
 		final int mvmtCost = 10;
 		final int mvmtCostDiag = 14;
 		PriorityQueue<AStarTile> openTiles = new PriorityQueue<AStarTile>(); // min heap
 		// Map from tile to distance
-		HashMap<Point, Integer> gmap = new HashMap<Point, Integer>();
-		HashSet<Point> closedTiles = new HashSet<Point>();
-		Point start = new Point(startTx, startTy);
-		Point end = new Point(endTx, endTy);
+		HashMap<Position, Integer> gmap = new HashMap<>();
+		HashSet<Position> closedTiles = new HashSet<>();
 		openTiles.add(new AStarTile(start, 0));
 		gmap.put(start, 0);
 		while (!openTiles.isEmpty()) {
-			Point p = openTiles.poll().tilePos;
+			Position p = openTiles.poll().tilePos;
 			if (p.equals(end))
 				return gmap.get(p) * TILE_SIZE / (double) mvmtCost;
 			int gvalue = gmap.get(p);
 			closedTiles.add(p);
 			// Explore the neighbours of p
-			int minx = Math.max(p.x - 1, 0);
-			int maxx = Math.min(p.x + 1, getWidth() - 1);
-			int miny = Math.max(p.y - 1, 0);
-			int maxy = Math.min(p.y + 1, getHeight() - 1);
+			int bx = p.getBX();
+			int by = p.getBY();
+			int minx = Math.max(bx - 1, 0);
+			int maxx = Math.min(bx + 1, size.getBX() - 1);
+			int miny = Math.max(by - 1, 0);
+			int maxy = Math.min(by + 1, size.getBY() - 1);
 			for (int x = minx; x <= maxx; x++)
 				for (int y = miny; y <= maxy; y++) {
-					if (!isLowResWalkable(new Position(x, y, Type.BUILD)))
+					Position t = new Position(x, y, PosType.BUILD);
+					if (!isLowResWalkable(t))
 						continue;
-					if (p.x != x && p.y != y
-							&& !isLowResWalkable(new Position(p.x, y, Type.BUILD))
-							&& !isLowResWalkable(new Position(x, p.y, Type.BUILD)))
+					if (bx != x && by != y
+							&& !isLowResWalkable(new Position(bx, y, PosType.BUILD))
+							&& !isLowResWalkable(new Position(x, by, PosType.BUILD)))
 						continue; // Not diagonally accessible
-					Point t = new Point(x, y);
 					if (closedTiles.contains(t))
 						continue;
 					
 					int g = gvalue + mvmtCost;
-					if (x != p.x && y != p.y)
+					if (x != bx && y != by)
 						g = gvalue + mvmtCostDiag;
-					int dx = Math.abs(x - end.x);
-					int dy = Math.abs(y - end.y);
+					int dx = Math.abs(x - end.getBX());
+					int dy = Math.abs(y - end.getBY());
 					// Heuristic for remaining distance:
 					// min(dx, dy) is the minimum diagonal distance, so costs mvmtCostDiag
 					// abs(dx - dy) is the rest of the distance, so costs mvmtCost
@@ -308,10 +324,10 @@ public class Map {
 	}
 	
 	private static class AStarTile implements Comparable<AStarTile> {
-		Point tilePos;
+		Position tilePos;
 		int distPlusCost;
 		
-		public AStarTile(Point tile, int distance) {
+		public AStarTile(Position tile, int distance) {
 			tilePos = tile;
 			distPlusCost = distance;
 		}
@@ -332,12 +348,12 @@ public class Map {
 			Position p = bl.getPosition();
 			
 			// draw outline of base location
-			Position otherCorner = p.translated(new Position(4, 3, Type.BUILD));
+			Position otherCorner = p.translated(new Position(4, 3, PosType.BUILD));
 			bwapi.drawBox(p, otherCorner, BWColor.Blue, false, false);
 			
 			// if this is an island expansion, draw a yellow circle around the base location
 			if (bl.isIsland()) {
-				bwapi.drawCircle(p.translated(new Position(2, 1, Type.BUILD)), 80, BWColor.Yellow,
+				bwapi.drawCircle(p.translated(new Position(2, 1, PosType.BUILD)), 80, BWColor.Yellow,
 						false, false);
 			}
 			
@@ -350,7 +366,7 @@ public class Map {
 						bwapi.drawCircle(u.getPosition(), 30, BWColor.Cyan, false, false);
 					} else {
 						// Geysers
-						bwapi.drawBox(u.getTopLeft(), u.getBottomRight(), BWColor.Orange,false,
+						bwapi.drawBox(u.getTopLeft(), u.getBottomRight(), BWColor.Orange, false,
 								false);
 					}
 				}

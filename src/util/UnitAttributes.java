@@ -3,7 +3,7 @@ package util;
 import java.util.Arrays;
 import java.util.Map;
 
-import jnibwapi.model.Unit;
+import jnibwapi.Unit;
 
 /**
  * Stores the attributes of a Unit as a simple int array so that they can be easily iterated over
