@@ -1,8 +1,13 @@
 #!/bin/bash
 
+# Get the replay folder setting from extractor configuration file.
+replayFolder=`grep -E "replay_folder\s*=" extractorConfig.properties | cut -d = -f 2`
+echo Using replay folder: $replayFolder
+
 # Ensure there are replay files to operate upon
-while [ "`ls replays/TvZ/*.rep`" ]; do
+while [ "`ls $replayFolder/*.rep`" ]; do
   # Clean up the logs
+  echo Cleaning up logs
   outputFile=javabot-impt-`date +%y%m%d-%H%M%S`.log
   ls -rv javabot.log.* | xargs grep -e "INFO\|WARNING\|SEVERE" -C 10 > $outputFile
   rm javabot.log.*
@@ -10,8 +15,12 @@ while [ "`ls replays/TvZ/*.rep`" ]; do
     # Delete empty output files
     rm $outputFile
   fi
+  # Make sure Starcraft is closed
+  sleep 2
+  ./closeStarcraft.exe
   # Run (have to use cygpath to get the windows paths which java is expecting)
-  java -Xmx512m -Xms512m -cp `cygpath -wp ./bin:../mysql-connector-java-5.1.24-bin.jar` extractor.ExtractStates &
+  echo Starting Starcraft
+  java -Xmx512m -Xms512m -ea -cp `cygpath -wp ./bin:../mysql-connector-java-5.1.24-bin.jar` extractor.ExtractStates &
   javaPID=$!
   
   sleep 4

@@ -17,11 +17,11 @@ import java.util.logging.Logger;
 
 import jnibwapi.BWAPIEventListener;
 import jnibwapi.JNIBWAPI;
-import jnibwapi.model.Player;
-import jnibwapi.model.Position;
-import jnibwapi.model.Position.Type;
-import jnibwapi.model.Region;
-import jnibwapi.model.Unit;
+import jnibwapi.Player;
+import jnibwapi.Position;
+import jnibwapi.Position.PosType;
+import jnibwapi.Region;
+import jnibwapi.Unit;
 import jnibwapi.types.EventType;
 import jnibwapi.types.RaceType.RaceTypes;
 import jnibwapi.types.UnitType;
@@ -87,6 +87,8 @@ public class ExtractStates implements BWAPIEventListener {
 	private final int progressPercent;
 	/** Whether to draw terrain data on the map */
 	private final boolean debugDrawTerrain;
+	/** Whether to draw region IDs on the map (very slow) */
+	private final boolean debugDrawRegionIds;
 	
 	// globals held between matches
 	private final JNIBWAPI bwapi;
@@ -141,6 +143,8 @@ public class ExtractStates implements BWAPIEventListener {
 				Util.getPropertyNotNull(props, "es_replay_almost_percent"));
 		debugDrawTerrain = Boolean.parseBoolean(
 				Util.getPropertyNotNull(props, "es_debug_draw_terrain"));
+		debugDrawRegionIds = Boolean.parseBoolean(
+				Util.getPropertyNotNull(props, "es_debug_draw_region_ids"));
 		
 		dbc = new DbConnection();
 		bwapi = new JNIBWAPI(this, true);
@@ -153,7 +157,7 @@ public class ExtractStates implements BWAPIEventListener {
 		bwapi.enablePerfectInformation();
 		bwapi.setGameSpeed(0);
 		bwapi.setFrameSkip(24); // Don't draw every frame (not the same as recorded frames)
-		// TODO bwapi.setLatencyCompensation(false);not accessible in JNIBWAPI
+		bwapi.setLatCom(false);
 		
 		mi = new MatchInfo(bwapi.getPlayers());
 		
@@ -178,6 +182,17 @@ public class ExtractStates implements BWAPIEventListener {
 		// Debug draw terrain
 		if (debugDrawTerrain) {
 			bwapi.getMap().drawTerrainData(bwapi);
+		}
+		// Debug draw region IDs (very slow)
+		if (debugDrawRegionIds) {
+			for (int i = 0; i < bwapi.getMap().getSize().getBX(); i++) {
+				for (int j = 0; j < bwapi.getMap().getSize().getBY(); j++) {
+					Position p = new Position(i, j, PosType.BUILD);
+					Region r = bwapi.getMap().getRegion(p);
+					int regionId = r != null ? r.getID() : 0;
+					bwapi.drawText(p, "" + regionId, false);
+				}
+			}
 		}
 		
 		int frame = bwapi.getFrameCount();
@@ -277,13 +292,13 @@ public class ExtractStates implements BWAPIEventListener {
 	}
 	
 	@Override
-	public void nukeDetect(int x, int y) {
+	public void nukeDetect(Position p) {
 		// pixel coordinates
-		LOGGER.fine("Nuke Detect event at: (" + x + "," + y + ")");
+		LOGGER.fine("Nuke Detect event at: (" + p.getPX() + "," + p.getPY() + ")");
 		List<Object> data = new ArrayList<>();
 		data.add(mi.dbMapId);
-		data.add(x / jnibwapi.model.Map.TILE_SIZE);
-		data.add(y / jnibwapi.model.Map.TILE_SIZE);
+		data.add(p.getBX());
+		data.add(p.getBY());
 		long buildTileId = -1;
 		try {
 			buildTileId = dbc.queryFirstColumn("SELECT * FROM buildtile " +
@@ -417,11 +432,11 @@ public class ExtractStates implements BWAPIEventListener {
 					for (int j = 0; j < WTPBT; j++) {
 						// Note iteration is in columns, not rows
 						boolean w = bwapi.getMap().isWalkable(
-								new Position(x * WTPBT + i, y * WTPBT + j, Type.WALK));
+								new Position(x * WTPBT + i, y * WTPBT + j, PosType.WALK));
 						walkable += w ? 1 : 0;
 					}
 				}
-				Position p = new Position(x, y, Type.BUILD);
+				Position p = new Position(x, y, PosType.BUILD);
 				data.clear();
 				data.add(mi.dbMapId);
 				data.add(x);
@@ -808,7 +823,7 @@ public class ExtractStates implements BWAPIEventListener {
 	private Map<Region, RegionValues> sumRegionValues(Player p, Collection<Unit> lastSeenUnits) {
 		Map<Region, RegionValues> newRegionValues = new HashMap<>();
 		for (Unit u : lastSeenUnits) {
-			Region r = bwapi.getMap().getRegion(u.getPosition());
+			Region r = bwapi.getMap().getRegion(u.getTilePosition()); // TODO change to Position
 			if (r == null) {
 				// We must be in a non-region area
 				r = REGION_NONE;

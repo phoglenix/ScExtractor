@@ -15,3 +15,4 @@ To run:
 6. Run ChaosLauncher (from BWAPI) as administrator.
 6. Run ExtractStates as administrator - this will connect to Starcraft and run through each replay file in turn, extracting in-game data that is not accessible from parsing replay files.
 7. ExtractStates or Starcraft has crashed? Run keeprunning.sh as administrator - this will attempt to detect when things have crashed and restart them. Note you will need to set the replay folder location in this script as well, and it requires cygwin.
+8. After extracting data, check for bad replays with more than 1% "none" type units using a command from "Useful Queries.sql"

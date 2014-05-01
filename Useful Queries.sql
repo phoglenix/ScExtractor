@@ -36,10 +36,22 @@ ORDER BY count( * ) DESC
 -- bad replays (have "none" type units left) - usually broken, wrong version probably
 SELECT count(*), playerreplay.replayid, replayname FROM `unit` natural join playerreplay natural join replay WHERE `UnitTypeID`=228 group by replayid ORDER BY count(*)  DESC
 
+-- bad replays with < 30 "none" type units
+SELECT * FROM (SELECT count(*) AS c, playerreplay.replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay WHERE `UnitTypeID`=228 GROUP BY replayid) t WHERE c<30
+
+-- bad replays ordered by proportion of "none" type units
+SELECT invalids, totalUnits, (invalids/totalUnits), replayid, replayname FROM (SELECT count(*) AS invalids, replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay WHERE `UnitTypeID`=228 GROUP BY replayid) t1 NATURAL JOIN (SELECT count(*) AS totalUnits, replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay GROUP BY replayid) t2 ORDER BY `(invalids/totalUnits)`  DESC
+
+-- bad replays with more than 1% "none" type units
+SELECT invalids, totalUnits, (invalids/totalUnits), replayid, replayname FROM (SELECT count(*) AS invalids, replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay WHERE `UnitTypeID`=228 GROUP BY replayid) t1 NATURAL JOIN (SELECT count(*) AS totalUnits, replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay GROUP BY replayid) t2 WHERE (invalids/totalUnits)>0.01 ORDER BY (invalids/totalUnits)  DESC;
+
+-- set @repname to one of the replays with more than 1% "none" type units
+SELECT replayname FROM (SELECT count(*) AS invalids, replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay WHERE `UnitTypeID`=228 GROUP BY replayid) t1 NATURAL JOIN (SELECT count(*) AS totalUnits, replayid, replayname FROM `unit` NATURAL JOIN playerreplay NATURAL JOIN replay GROUP BY replayid) t2 WHERE (invalids/totalUnits)>0.01 LIMIT 1 into @repname;
+
 -- set @repname to the one with the most "none" type units
-SELECT replayname FROM `unit` natural join playerreplay natural join replay WHERE `UnitTypeID`=228 group by replayid ORDER BY count(*)  DESC LIMIT 1 into @repname;
--- OR (avoiding stupid collaction issues):
-SELECT replayname FROM replay WHERE replayname='GG123.rep' into @repname;
+-- SELECT replayname FROM `unit` natural join playerreplay natural join replay WHERE `UnitTypeID`=228 group by replayid ORDER BY count(*)  DESC LIMIT 1 into @repname;
+-- OR choose a specific replayname (avoiding stupid collaction issues):
+-- SELECT replayname FROM replay WHERE replayname='GG123.rep' into @repname;
 
 /* delete a replay (broken down into smaller steps and not using cascade so it goes faster) */
 select min(playerreplayid) from playerreplay natural join replay where replayname=@repname into @prid;
@@ -92,7 +104,7 @@ DELETE map FROM map left join replay on map.mapid=replay.mapid WHERE hash is nul
 
 
 /* Find numbers of each race used in each replay (for finding if a replay is in the correct DB) */
-SELECT replayid, count(*) as c, t, p, z, n FROM playerreplay NATURAL LEFT JOIN (SELECT replayid, count(*) as t FROM playerreplay WHERE raceid=1 GROUP BY replayid) tt NATURAL LEFT JOIN (SELECT replayid, count(*) as p FROM playerreplay WHERE raceid=2 GROUP BY replayid) pt NATURAL LEFT JOIN (SELECT replayid, count(*) as z FROM playerreplay WHERE raceid=3 GROUP BY replayid) zt NATURAL LEFT JOIN (SELECT replayid, count(*) as n FROM playerreplay WHERE raceid=5 GROUP BY replayid) nt GROUP BY replayid
+SELECT replayid, count(*) as c, t, p, z, n FROM playerreplay NATURAL LEFT JOIN (SELECT replayid, count(*) as t FROM playerreplay WHERE raceid=1 GROUP BY replayid) tt NATURAL LEFT JOIN (SELECT replayid, count(*) as p FROM playerreplay WHERE raceid=2 GROUP BY replayid) pt NATURAL LEFT JOIN (SELECT replayid, count(*) as z FROM playerreplay WHERE raceid=0 GROUP BY replayid) zt NATURAL LEFT JOIN (SELECT replayid, count(*) as n FROM playerreplay WHERE raceid=5 GROUP BY replayid) nt GROUP BY replayid
 
 /*
 Backup database to h: 

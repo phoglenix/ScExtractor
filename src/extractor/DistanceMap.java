@@ -6,11 +6,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import jnibwapi.model.BaseLocation;
-import jnibwapi.model.ChokePoint;
-import jnibwapi.model.Map;
-import jnibwapi.model.Position;
-import jnibwapi.model.Position.Type;
+import jnibwapi.BaseLocation;
+import jnibwapi.ChokePoint;
+import jnibwapi.Map;
+import jnibwapi.Position;
+import jnibwapi.Position.PosType;
 
 /** Adds distance maps to nearest points of interest, based on a BWAPI map's information */
 public class DistanceMap {
@@ -40,8 +40,12 @@ public class DistanceMap {
 		for (BaseLocation bl : map.getBaseLocations()) {
 			// Broodwar/BWTA sometimes gives back non-buildable/non-walkable BaseLocations, or even
 			// ones outside the map bounds!
+			// TODO should probably check isValid
+			// TODO should probably use the centre rather than the position (top left)
 			if (map.isBuildable(bl.getPosition())) {
 				seeds.add(bl.getPosition());
+			} else {
+				LOGGER.warning("Base location outside map bounds! " + bl.getPosition());
 			}
 		}
 		baseLocationDistMap = floodFillDistances(seeds);
@@ -49,7 +53,9 @@ public class DistanceMap {
 		// calculate distance map for start locations
 		seeds.clear();
 		for (BaseLocation bl : map.getBaseLocations()) {
+			// TODO should probably check isBuildable and isValid
 			if (bl.isStartLocation()) {
+				// TODO should probably use the centre rather than the position (top left)
 				seeds.add(bl.getPosition());
 			}
 		}
@@ -62,7 +68,7 @@ public class DistanceMap {
 	}
 	
 	public int getChokeDist(Position p) {
-		if (p.isValid(map)) {
+		if (p.isValid()) {
 			return chokeDistMap[getBuildTileArrayIndex(p)];
 		}
 		else {
@@ -71,7 +77,7 @@ public class DistanceMap {
 	}
 	
 	public int getBaseLocationDist(Position p) {
-		if (p.isValid(map)) {
+		if (p.isValid()) {
 			return baseLocationDistMap[getBuildTileArrayIndex(p)];
 		}
 		else {
@@ -80,7 +86,7 @@ public class DistanceMap {
 	}
 	
 	public int getStartLocationDist(Position p) {
-		if (p.isValid(map)) {
+		if (p.isValid()) {
 			return startLocationDistMap[getBuildTileArrayIndex(p)];
 		}
 		else {
@@ -99,7 +105,7 @@ public class DistanceMap {
 		Arrays.fill(distMap, Integer.MAX_VALUE);
 		// Set the distance to 0 at the seeds
 		for (Position p : seeds) {
-			if (p.isValid(map)) {
+			if (p.isValid()) {
 				distMap[getBuildTileArrayIndex(p)] = 0;
 			} else {
 				LOGGER.warning("Seed point was out of bounds: " + p);
@@ -128,12 +134,12 @@ public class DistanceMap {
 						diff = tileSizeDiag;
 					}
 					// Rely on isLowResWalkable to check boundaries (as well as walkability)
-					if (map.isLowResWalkable(new Position(x, y, Type.BUILD))) {
+					if (map.isLowResWalkable(new Position(x, y, PosType.BUILD))) {
 						int existingDist = distMap[x + map.getSize().getBX() * y];
 						if (dist + diff < existingDist) {
 							// Update map tile and neighbours
 							distMap[x + map.getSize().getBX() * y] = dist + diff;
-							open.add(new Position(x, y, Type.BUILD));
+							open.add(new Position(x, y, PosType.BUILD));
 						}
 					}
 				}

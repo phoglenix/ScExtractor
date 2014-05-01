@@ -436,7 +436,7 @@ public class BinRepParser {
 							+ orderType);
 					// Always seems to be 31 (BuildProtoss1?) in PvP
 					// With Terran in game, seems to be mostly 30 (PlaceBuilding) or 36 (PlaceAddon)
-					// FIXME: and occasional 71 (BuildingLand) - - shouldn't be a build action?
+					// and occasional 71 (BuildingLand) - - shouldn't be a build action?
 					// With Zerg in game, has 25 (DroneStartBuild)
 					// and occasional 46 (BuildNydusExit) - - shouldn't be a build action?
 				}

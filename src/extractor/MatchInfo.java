@@ -6,9 +6,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import jnibwapi.model.Player;
-import jnibwapi.model.Region;
-import jnibwapi.model.Unit;
+import jnibwapi.Player;
+import jnibwapi.Region;
+import jnibwapi.Unit;
 import util.UnitAttributes;
 import extractor.ExtractStates.PlayerResources;
 import extractor.ExtractStates.RegionValues;
