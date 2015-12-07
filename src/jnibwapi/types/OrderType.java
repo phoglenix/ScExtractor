@@ -23,9 +23,9 @@ public class OrderType {
 		public static final OrderType BunkerGuard = new OrderType(5);
 		public static final OrderType Move = new OrderType(6);
 		// public static final OrderType ReaverStop = new OrderType(7); // Unused
-		/** Generic attack order */
+		/** Generic attack order. Should not be issued directly. */
 		public static final OrderType Attack = new OrderType(8);
-		/** Attack building in fog */
+		/** Attack building in fog. Should not be issued directly. */
 		public static final OrderType AttackShrouded = new OrderType(9);
 		public static final OrderType AttackUnit = new OrderType(10);
 		// public static final OrderType AttackFixedRange = new OrderType(11); // Unused
@@ -36,6 +36,7 @@ public class OrderType {
 		public static final OrderType UnusedNothing = new OrderType(16);
 		public static final OrderType UnusedPowerup = new OrderType(17);
 		public static final OrderType TowerGuard = new OrderType(18);
+		/** Should not be issued directly. */
 		public static final OrderType FailedCasting = new OrderType(19);
 		public static final OrderType VultureMine = new OrderType(20);
 		// public static final OrderType StayInRange = new OrderType(21); // Unused
@@ -67,13 +68,18 @@ public class OrderType {
 		public static final OrderType Carrier = new OrderType(50);
 		public static final OrderType ReaverCarrierMove = new OrderType(51);
 		// public static final OrderType CarrierStop = new OrderType(52); // Unused
-		public static final OrderType CarrierAttack1 = new OrderType(53);
-		public static final OrderType CarrierAttack2 = new OrderType(54);
-		// public static final OrderType CarrierFight = new OrderType(56); // Unused
+		/** Should not be issued directly. */
+		public static final OrderType CarrierAttack = new OrderType(53);
+		/** Should not be issued directly. */
+		public static final OrderType CarrierMoveToAttack = new OrderType(54);
 		public static final OrderType CarrierIgnore2 = new OrderType(55);
+		// public static final OrderType CarrierFight = new OrderType(56); // Unused
+		// public static final OrderType CarrierHoldPosition = new OrderType(57); // Unused
 		public static final OrderType Reaver = new OrderType(58);
-		public static final OrderType ReaverAttack1 = new OrderType(59);
-		public static final OrderType ReaverAttack2 = new OrderType(60);
+		/** Should not be issued directly. */
+		public static final OrderType ReaverAttack = new OrderType(59);
+		/** Should not be issued directly. */
+		public static final OrderType ReaverMoveToAttack = new OrderType(60);
 		// public static final OrderType ReaverFight = new OrderType(61); // Unused
 		// public static final OrderType ReaverHoldPosition = new OrderType(62); // Unused
 		public static final OrderType TrainFighter = new OrderType(63); // Interceptor / Scarab ?
@@ -134,6 +140,7 @@ public class OrderType {
 		public static final OrderType Unload = new OrderType(111);
 		public static final OrderType MoveUnload = new OrderType(112);
 		public static final OrderType FireYamatoGun = new OrderType(113);
+		/** Should not be issued directly. */
 		public static final OrderType MoveToFireYamatoGun = new OrderType(114);
 		public static final OrderType CastLockdown = new OrderType(115);
 		public static final OrderType Burrowing = new OrderType(116);
