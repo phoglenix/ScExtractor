@@ -1,15 +1,12 @@
 package util;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Properties;
-import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Util {
 	/** Joins each item in the Iterable, separated by sep, into a String */
@@ -32,44 +29,26 @@ public class Util {
 		return join(", ", it);
 	}
 	
-	/**
-	 * Loads the file from the disc as an ordered set of strings. File is expected to be
-	 * newline-separated entries as created by {@link #saveSetToDisc(Set, String)}.
-	 */
-	public static Set<String> loadSetFromDisc(String filename) throws IOException {
-		Set<String> set = new LinkedHashSet<>();
-		File file = new File(filename);
-		if (!file.canRead()) {
-			System.out.println("loadSetFromDisc: File not readable: " + file.getAbsolutePath()
-					+ ". Creating it.");
-			file.createNewFile();
-			return set;
-		}
-		BufferedReader br = new BufferedReader(new FileReader(file));
-		String line;
-		while ((line = br.readLine()) != null) {
-			set.add(line);
-		}
-		br.close();
-		return set;
+	/** Joins each item in the Stream, separated by sep, into a String */
+	public static String join(String sep, Stream<?> s) {
+		return s.map(Object::toString).collect(Collectors.joining(", "));
 	}
 	
 	/**
-	 * Saves the set of strings to disc as newline-separated entries. Entries can be read again
-	 * using {@link #loadSetFromDisc(String)}.
+	 * Convenience method: calls {@link #join(String, Stream)} with {@code ", "} as the separator
 	 */
-	public static void saveSetToDisc(Set<String> set, String filename) throws IOException {
-		File file = new File(filename);
-		file.createNewFile();
-		if (!file.canWrite()) {
-			throw new IOException("Cannot write to file: " + file.getAbsolutePath());
-		}
-		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-		for (String s : set) {
-			bw.write(s);
-			bw.newLine();
-		}
-		bw.close();
+	public static String join(Stream<?> s) {
+		return s.map(Object::toString).collect(Collectors.joining(", "));
+	}
+	
+	/** Check if <code>line.startsWith(start)</code> ignoring case. */
+	public static boolean startsWithIgnoreCase(String line, String start) {
+		return line.length() >= start.length()
+				&& line.substring(0, start.length()).equalsIgnoreCase(start);
+	}
+	
+	public static  Collector<Object, ?, Integer> countingInt() {
+		return Collectors.reducing(0, elt -> 1, Integer::sum);
 	}
 	
 	/** Loads the given properties file from disc. */
@@ -93,4 +72,48 @@ public class Util {
 		return retVal;
 	}
 	
+	/**
+	 * Returns a view of the last N items of input list, or fewer if there are fewer than N items in
+	 * the list.
+	 */
+	public static<T> List<T> lastN(List<T> list, int n) {
+		return list.subList(Math.max(0, list.size() - n), list.size());
+	}
+	
+	/**
+	 * Returns a substring of the last N characters of the input string, or fewer if there are fewer
+	 * than N characters in the string.
+	 */
+	public static String lastN(String s, int n) {
+		return s.substring(Math.max(0, s.length() - n), s.length());
+	}
+	
+	/** A pair of items. Immutable. */
+	public static class Pair<F, S> {
+		public final F first;
+		public final S second;
+		
+		public Pair(F first, S second) {
+			this.first = first;
+			this.second = second;
+		}
+		
+		@Override
+		public String toString() {
+			return "Pair:" + String.valueOf(first) + "," + String.valueOf(second);
+		}
+	}
+	
+	/** A triple of items. Immutable. */
+	public static class Triple<F, S, T> {
+		public final F first;
+		public final S second;
+		public final T third;
+		
+		public Triple(F first, S second, T third) {
+			this.first = first;
+			this.second = second;
+			this.third = third;
+		}
+	}
 }

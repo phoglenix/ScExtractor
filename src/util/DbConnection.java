@@ -21,7 +21,7 @@ public class DbConnection implements AutoCloseable {
 	private static final Logger LOGGER = Logger.getLogger(DbConnection.class.getName());
 
 	/** Properties file to load */
-	private static final String PROPERTIES_FILENAME = "extractorConfig.properties";
+	private static final String PROPERTIES_FILENAME = "databaseConfig.properties";
 	/** Whether to prevent the program from performing changes to the DB (eg. insert, delete) */
 	private final boolean debugMode;
 
@@ -40,7 +40,7 @@ public class DbConnection implements AutoCloseable {
 		debugMode = Boolean.parseBoolean(Util.getPropertyNotNull(props, "db_debug_mode"));
 		
 		if (debugMode) {
-			LOGGER.warning("DEBUG MODE ACTIVE");
+			LOGGER.warning("DATABASE DEBUG MODE ACTIVE");
 		}
 		
 		con = DriverManager.getConnection(dbUrl, dbUser, dbPw);
@@ -57,6 +57,12 @@ public class DbConnection implements AutoCloseable {
 	
 	public boolean isConnected() {
 		return connected;
+	}
+	
+	public ResultSet executeQuery(String sql, Object data) throws SQLException {
+		List<Object> dataList = new ArrayList<>(1);
+		dataList.add(data);
+		return executeQuery(sql, dataList);
 	}
 	
 	public ResultSet executeQuery(String sql, List<? extends Object> data) throws SQLException {

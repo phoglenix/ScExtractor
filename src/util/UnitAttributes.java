@@ -11,12 +11,130 @@ import jnibwapi.Unit;
  * the unit's replayId because unit IDs vary from game to game and are not stored in the DB.
  */
 public class UnitAttributes {
+	/** Representation of the names of attributes names stored in the DB */
+	public static enum UnitAttribute {
+		Pos_X,
+		Pos_Y,
+		Velocity_X,
+		Velocity_Y,
+		Angle,
+		Hit_Points,
+		Shields,
+		Energy,
+		Kill_Count,
+		Acid_Spore_Count,
+		Interceptor_Count,
+		Scarab_Count,
+		Spider_Mine_Count,
+		Ground_Weapon_Cooldown,
+		Air_Weapon_Cooldown,
+		Spell_Cooldown,
+		Defense_Matrix_Points,
+		Defense_Matrix_Timer,
+		Ensnare_Timer,
+		Irradiate_Timer,
+		Lockdown_Timer,
+		Maelstrom_Timer,
+		Plague_Timer,
+		Remove_Timer,
+		Stasis_Timer,
+		Target_Unit_Replay_ID,
+		Order_ID,
+		Is_Attack_Frame,
+		Exists,
+		Stim_Timer,
+		Build_Type_ID,
+		Target_Position_X,
+		Target_Position_Y,
+		Order_Target_Unit_Replay_ID,
+		Secondary_Order_ID,
+		Transport_Unit_Replay_ID,
+		Blind,
+		Burrowed,
+		Carrying_Gas,
+		Carrying_Minerals,
+		Cloaked,
+		Constructing,
+		Detected,
+		Gathering_Gas,
+		Gathering_Minerals,
+		Invincible,
+		Lifted,
+		Morphing,
+		Parasited,
+		Patrolling,
+		Repairing,
+		Sieged,
+		Stuck,
+		Under_Attack,
+		Under_Dark_Swarm,
+		Under_Disruptor_Web,
+		Under_Storm,
+		Unpowered,
+		Order_Timer,
+		Training_Queue_Size,
+		Researching_Tech_ID,
+		Upgrading_Upgrade_ID,
+		Remaining_Build_Timer,
+		Remaining_Train_Time,
+		Remaining_Research_Time,
+		Remaining_Upgrade_Time,
+		Build_Unit_Replay_ID,
+		Rally_X,
+		Rally_Y,
+		Rally_Unit_Replay_ID,
+		Num_Loaded_Units,
+		Num_Larva,
+		Nuke_Ready,
+		Accelerating,
+		Attacking,
+		Attack_Frame,
+		Being_Constructed,
+		Being_Gathered,
+		Being_Healed,
+		Braking,
+		Completed,
+		Defense_Matrixed,
+		Ensnared,
+		Following,
+		Hallucination,
+		Holding_Position,
+		Idle,
+		Interruptable,
+		Irradiated,
+		Loaded,
+		Locked_Down,
+		Maelstrommed,
+		Moving,
+		Plagued,
+		Starting_Attack,
+		Stasised,
+		Stimmed,
+		Training,
+		Upgrading,
+		Type_ID,
+		Add_On_Unit_Replay_ID;
+		
+		public int getId() {
+			return ordinal();
+		}
+	}
 	public static int NUM_ATTRIBUTES = 101;
 	/** First 58 attributes match Stefan's. Rest are added by Glen */
-	public int[] attributes = new int[NUM_ATTRIBUTES];
+	public final int[] attributes = new int[NUM_ATTRIBUTES];
 	
 	/** Default constructor with 0 for all attributes. */
 	public UnitAttributes() {}
+	
+	/** Constructor from a given array of attributes */
+	public UnitAttributes(int[] attributes) {
+		if (attributes.length != NUM_ATTRIBUTES) {
+			throw new IllegalArgumentException("Incorrect number of attributes.");
+		}
+		for (int i = 0; i < NUM_ATTRIBUTES; i++) {
+			this.attributes[i] = attributes[i];
+		}
+	}
 	
 	/**
 	 * Constructs a UnitAttributes with the attributes of the given Unit. Requires a map of unit IDs
