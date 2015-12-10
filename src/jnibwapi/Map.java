@@ -132,12 +132,12 @@ public class Map {
 		return size.getBY();
 	}
 	
-	/** @deprecated Width in walk tiles (32px). Use {@link #getSize()} instead. */
+	/** @deprecated Width in walk tiles (8px). Use {@link #getSize()} instead. */
 	public int getWalkWidth() {
 		return size.getWX();
 	}
 	
-	/** @deprecated Height in walk tiles (32px). Use {@link #getSize()} instead. */
+	/** @deprecated Height in walk tiles (8px). Use {@link #getSize()} instead. */
 	public int getWalkHeight() {
 		return size.getWY();
 	}
@@ -342,10 +342,15 @@ public class Map {
 	 * Debugging method to check terrain has been analysed properly. Taken from BWAPI's
 	 * ExampleAIClient
 	 */
-	public void drawTerrainData(JNIBWAPI bwapi) {
+	public void drawTerrainData() {
+		JNIBWAPI bwapi = JNIBWAPI.getInstance();
+		if (bwapi == null)
+			return;
 		// iterate through all the base locations and draw their outlines
 		for (BaseLocation bl : bwapi.getMap().getBaseLocations()) {
 			Position p = bl.getPosition();
+			// label the position
+			bwapi.drawText(p, p.getBX() + "," + p.getBY(), false);
 			
 			// draw outline of base location
 			Position otherCorner = p.translated(new Position(4, 3, PosType.BUILD));

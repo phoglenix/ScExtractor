@@ -595,11 +595,7 @@ public class JNIBWAPI {
 		// event types - no extra data to load
 	}
 	
-	/**
-	 * Loads map data and (if enableBWTA is true) BWTA data.
-	 * 
-	 * TODO: figure out how to use BWTA's internal map storage
-	 */
+	/** Loads map data and (if enableBWTA is true) BWTA data. */
 	private void loadMapData() {
 		String mapName = new String(getMapName(), charset);
 		map = new Map(getMapWidth(), getMapHeight(), mapName, getMapFileName(), getMapHash(),
@@ -641,9 +637,7 @@ public class JNIBWAPI {
 			}
 			
 			// store the results to a local file (bwta directory)
-			try {
-				BufferedWriter writer = new BufferedWriter(new FileWriter(bwtaFile));
-				
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(bwtaFile))) {
 				writeMapData(writer, regionMapData);
 				writeMapData(writer, regionData);
 				writeMapData(writer, chokePointData);
@@ -652,8 +646,6 @@ public class JNIBWAPI {
 					writer.write("" + id + ",");
 					writeMapData(writer, polygons.get(id));
 				}
-				
-				writer.close();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

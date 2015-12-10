@@ -210,12 +210,11 @@ public class DbConnection implements AutoCloseable {
 			}
 		}
 		if (extraValues.size() > 0) {
+			// Print only some of the extra values because there may be a lot.
+			int i = extraValues.size() > 50 ? 50 : extraValues.size();
 			if (extraValues.size() > maxNumToRemove) {
 				LOGGER.warning("Found " + extraValues.size() + " extras in " + table 
 						+ ". Too many! Not removed!");
-				// Print only some of the extra values because there may be a lot.
-				int i = extraValues.size() > 50 ? 50 : extraValues.size();
-				LOGGER.info("First " + i + " extras: " + Util.join(extraValues.subList(0, i)));
 			} else {
 				LOGGER.info("Removing " + extraValues.size() + " extras from " + table);
 				for (Long id : extraValues) {
@@ -224,6 +223,7 @@ public class DbConnection implements AutoCloseable {
 					executeDelete("DELETE FROM " + table + " WHERE " + column + "=?", data);
 				}
 			}
+			LOGGER.info("First " + i + " extras: " + Util.join(extraValues.subList(0, i)));
 		}
 	}
 

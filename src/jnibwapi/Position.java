@@ -99,10 +99,20 @@ public class Position {
 		return Math.sqrt(dx * dx + dy * dy);
 	}
 	
+	/**
+	 * Returns the distance to the target position in Walk-tile coordinates.
+	 * 
+	 * @see #getApproxWDistance(Position)
+	 */
 	public double getWDistance(Position target) {
 		return getPDistance(target) / PosType.WALK.scale;
 	}
 	
+	/**
+	 * Returns the distance to the target position in Build-tile coordinates.
+	 * 
+	 * @see #getApproxBDistance(Position)
+	 */
 	public double getBDistance(Position target) {
 		return getPDistance(target) / PosType.BUILD.scale;
 	}

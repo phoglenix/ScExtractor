@@ -20,7 +20,7 @@ public class LogManager {
 		// Initialise the logger
 		FileHandler fh;
 		try {
-			String fullLogName = "logs/" + logName + "%u.%g.log";
+			String fullLogName = "logs/" + logName + ".%u.%g.log";
 			fh = new FileHandler(fullLogName, MAX_LOG_SIZE_BYTES, MAX_NUM_LOG_FILES);
 			fh.setEncoding("UTF-8");
 			fh.setFormatter(new SimpleFormatter());
