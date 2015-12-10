@@ -47,7 +47,7 @@ public class MapChecker {
 	
 	public static void main(String[] args) {
 		// Start the logger
-		LogManager.initialise();
+		LogManager.initialise("MapChecker");
 		
 		try {
 			MapChecker mc = new MapChecker();
@@ -297,8 +297,11 @@ public class MapChecker {
 		
 		reader.close();
 		
-		fakeJnibwapi.tempInitialize(map, regionMapData, regionData, polygons, chokePointData,
-				baseLocationData);
+		int theFollowingLineMustBeUncommentedToRunMapChecker;
+		// fakeJnibwapi.tempInitialize(map, regionMapData, regionData, polygons, chokePointData,
+		// baseLocationData);
+		
+		//
 		//
 		// Temporarily add this to JNIBWAPI for MapChecker to run.
 		// Necessary to do this from JNIBWAPI so that isValid() still works.
@@ -311,7 +314,7 @@ public class MapChecker {
 		// }
 		//
 		//
-		
+
 		return map;
 	}
 	

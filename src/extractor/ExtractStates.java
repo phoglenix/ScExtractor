@@ -25,13 +25,11 @@ import jnibwapi.Unit;
 import jnibwapi.types.EventType;
 import jnibwapi.types.RaceType.RaceTypes;
 import jnibwapi.types.UnitType;
-import jnibwapi.types.UnitType.UnitTypes;
 import util.DbConnection;
 import util.LogManager;
 import util.UnitAttributes;
 import util.Util;
 
-@SuppressWarnings("deprecation")
 public class ExtractStates implements BWAPIEventListener {
 	// constants
 	private static final Logger LOGGER = Logger.getLogger(ExtractStates.class.getName());
@@ -99,7 +97,7 @@ public class ExtractStates implements BWAPIEventListener {
 	
 	public static void main(String[] args) {
 		// Start the logger
-		LogManager.initialise();
+		LogManager.initialise("ExtractStates");
 		ExtractStates es;
 		try {
 			es = new ExtractStates();
@@ -200,7 +198,7 @@ public class ExtractStates implements BWAPIEventListener {
 		if (progressPercent != 0 &&
 				(frame + 1) % (bwapi.getReplayFrameTotal() / (100 / progressPercent)) == 0) {
 			int percentage = (frame + 1) / (bwapi.getReplayFrameTotal() / 100);
-			LOGGER.info(String.format("%3d", percentage) + "% complete");
+			LOGGER.fine(String.format("%3d", percentage) + "% complete");
 		}
 		if ((extractionMode == ExtractionMode.TIMED_FRAMES && isTimedFrame(frame)) ||
 				extractionMode == ExtractionMode.ACTION_FRAMES && isActionFrame(frame) ||
@@ -283,7 +281,7 @@ public class ExtractStates implements BWAPIEventListener {
 			return;
 		} else {
 			for (Unit u : mi.allUnits.values()) {
-				if (u.getPlayerID() == id && mi.unitIdToDbId.get(u.getID()) != null) {
+				if (u.getPlayer().equals(p) && mi.unitIdToDbId.get(u.getID()) != null) {
 					recordEvent(EventType.PlayerLeft, mi.unitIdToDbId.get(u.getID()), null);
 					return;
 				}
@@ -318,7 +316,7 @@ public class ExtractStates implements BWAPIEventListener {
 			LOGGER.warning("Unit was null!");
 			return;
 		}
-		if (!mi.playerIdToPlayerReplayId.containsKey(u.getPlayerID())) {
+		if (!mi.playerIdToPlayerReplayId.containsKey(u.getPlayer().getID())) {
 			LOGGER.fine("Non-player unit created: " + unitID + ". Ignored.");
 			return;
 		}
@@ -335,10 +333,11 @@ public class ExtractStates implements BWAPIEventListener {
 	public void unitDestroy(int unitID) {
 		// Get info from allUnits as bwapi clears records of destroyed units
 		Unit u = mi.allUnits.get(unitID);
-		if (u == null || !mi.playerIdToPlayerReplayId.containsKey(u.getPlayerID())) {
+		if (u == null || !mi.playerIdToPlayerReplayId.containsKey(u.getPlayer().getID())) {
 			LOGGER.fine("Non-player unit destroyed: " + unitID + ". Ignored.");
 			if (bwapi.getUnit(unitID) != null &&
-					mi.playerIdToPlayerReplayId.containsKey(bwapi.getUnit(unitID).getPlayerID())) {
+					mi.playerIdToPlayerReplayId.containsKey(
+							bwapi.getUnit(unitID).getPlayer().getID())) {
 				LOGGER.warning("Unit wasn't in allUnits but should have been!");
 			}
 			return;
@@ -364,7 +363,7 @@ public class ExtractStates implements BWAPIEventListener {
 				LOGGER.fine("UnitRenegade unit wasn't in unitIdToDbId. Also wasn't in bwapi");
 			} else {
 				LOGGER.fine("UnitRenegade unit wasn't in unitIdToDbId. Must be an observer's unit. "
-						+ "RepID: " + u.getReplayID() + " TypeID: " + u.getTypeID());
+						+ "RepID: " + u.getReplayID() + " Type: " + u.getType());
 			}
 			return;
 		}
@@ -455,25 +454,27 @@ public class ExtractStates implements BWAPIEventListener {
 				data.add(mi.regionToDbRegionId.get(bwapi.getMap().getRegion(p)));
 				long buildTileId = -1;
 				try {
-					buildTileId = dbc.executeInsert("INSERT INTO buildtile " +
-							"(MapID, BTilePosX, BTilePosY, GroundHeightID, Buildable, " +
-							"Walkable, ChokeDist, BaseLocationDist, StartLocationDist, RegionID) " +
-							"VALUES (?, ?, ?, ?, ?, b?, ?, ?, ?, ?)", data, true);
-				} catch (SQLException e) {
-					LOGGER.warning("Failed to insert/find buildTile. Trying to update instead.");
-					// Find the existing row using only the unique columns
+					// Try to update existing column first
 					buildTileId = dbc.queryFirstColumn("SELECT * FROM buildtile " +
 							"WHERE MapID=? AND BTilePosX=? AND BTilePosY=?", data.subList(0, 3));
-					if (buildTileId == -1) {
-						LOGGER.severe("Failed to get existing buildTile entry");
-						return;
+					if (buildTileId != -1) {
+						data.add(buildTileId);
+						dbc.executeUpdate("UPDATE buildtile SET GroundHeightID=?, Buildable=?, " +
+								"Walkable=b?, ChokeDist=?, BaseLocationDist=?, " +
+								"StartLocationDist=?, RegionID=? WHERE BuildTileID=?",
+								data.subList(3, data.size()), true);
+					} else {
+						buildTileId = dbc.executeInsert("INSERT INTO buildtile " +
+								"(MapID, BTilePosX, BTilePosY, GroundHeightID, Buildable, " +
+								"Walkable, ChokeDist, BaseLocationDist, StartLocationDist, " +
+								"RegionID) VALUES (?, ?, ?, ?, ?, b?, ?, ?, ?, ?)", data, true);
+						if (buildTileId == -1) {
+							throw new SQLException("Failed to update/insert buildTile.");
+						}
 					}
-					// Update the existing build tile
-					data.add(buildTileId);
-					dbc.executeUpdate("UPDATE buildtile SET GroundHeightID=?, Buildable=?, " +
-							"Walkable=b?, ChokeDist=?, BaseLocationDist=?, StartLocationDist=?, " +
-							"RegionID=? WHERE BuildTileID=?",
-							data.subList(3, data.size()), true);
+				} catch (SQLException e) {
+					LOGGER.log(Level.SEVERE, "Exception in buildTile entry " + Util.join(data), e);
+					return;
 				}
 			}
 		}
@@ -539,7 +540,7 @@ public class ExtractStates implements BWAPIEventListener {
 					data.clear();
 					data.add(playerToStartPosBtId.get(p));
 					data.add(p.getName());
-					data.add(p.getRaceID());
+					data.add(p.getRace().getID());
 					data.add(mi.dbReplayId);
 					playerReplayId = dbc.executeUpdate("UPDATE playerreplay " +
 							"SET StartPosBtId=? " +
@@ -550,7 +551,7 @@ public class ExtractStates implements BWAPIEventListener {
 					// Probably because player was actually an observer, but isObserver seems to be
 					// always true in melee games. Rely on ExtractActions to have found the correct
 					// players using action counts.
-					LOGGER.warning("PlayerReplayId was -1 for: " + Util.join(data) +
+					LOGGER.info("PlayerReplayId was -1 for: " + Util.join(data) +
 							" (probably an observer)");
 					continue;
 				}
@@ -569,20 +570,20 @@ public class ExtractStates implements BWAPIEventListener {
 	private void recordUnit(Unit unit) throws SQLException {
 		long dbUnitId;
 		List<Object> data = new ArrayList<>();
-		data.add(unit.getTypeID());
-		data.add(mi.playerIdToPlayerReplayId.get(unit.getPlayerID()));
+		data.add(unit.getType().getID());
+		data.add(mi.playerIdToPlayerReplayId.get(unit.getPlayer().getID()));
 		data.add(unit.getReplayID());
 		
-		if (!mi.playerIdToPlayerReplayId.containsKey(unit.getPlayerID())) {
+		if (!mi.playerIdToPlayerReplayId.containsKey(unit.getPlayer().getID())) {
 			String message = "Tried to add unit with invalid player: " + Util.join(data)
 					+ " in frame " + bwapi.getFrameCount() + "/" + bwapi.getReplayFrameTotal();
 			// Update count of invalid-playerreplay units
-			Integer count = mi.invalidPlayerIdToUnitCount.get(unit.getPlayerID());
+			Integer count = mi.invalidPlayerIdToUnitCount.get(unit.getPlayer().getID());
 			if (count == null) {
 				count = 0;
 			}
 			count++;
-			mi.invalidPlayerIdToUnitCount.put(unit.getPlayerID(), count);
+			mi.invalidPlayerIdToUnitCount.put(unit.getPlayer().getID(), count);
 			// Ignore observers' units (there should be 5 per observer if none more are made). They
 			// should be created only at the very start of the game but BWAPI does weird stuff.
 			if (count > 10) {
@@ -602,8 +603,8 @@ public class ExtractStates implements BWAPIEventListener {
 			// Other units may need to be created if they were never given orders in the replay
 			LOGGER.info(String.format(
 					"Unit added to DB: type: %d (%s), playerReplay: %d, unitReplay: %d",
-					unit.getTypeID(), UnitTypes.getUnitType(unit.getTypeID()),
-					mi.playerIdToPlayerReplayId.get(unit.getPlayerID()), unit.getReplayID()));
+					unit.getType().getID(), unit.getType(),
+					mi.playerIdToPlayerReplayId.get(unit.getPlayer().getID()), unit.getReplayID()));
 			dbUnitId = dbc.executeInsert(
 					"INSERT INTO unit (UnitTypeID, PlayerReplayID, UnitReplayID) " +
 							"VALUES (?, ?, ?)", data, true);
@@ -646,8 +647,7 @@ public class ExtractStates implements BWAPIEventListener {
 				LOGGER.severe("Unit was null! ID:" + unitId);
 				continue;
 			}
-			if (frameSkipWorkersMultiplier > 1
-					&& bwapi.getUnitType(currentUnit.getTypeID()).isWorker()) {
+			if (frameSkipWorkersMultiplier > 1 && currentUnit.getType().isWorker()) {
 				int actionFrameDist = getClosestActionFrameDist(currentUnit, frame);
 				if (actionFrameDist > inactiveUnitTime
 						&& frame % (frameSkipWorkersMultiplier * frameSkip) != 0 ) {
@@ -823,7 +823,7 @@ public class ExtractStates implements BWAPIEventListener {
 	private Map<Region, RegionValues> sumRegionValues(Player p, Collection<Unit> lastSeenUnits) {
 		Map<Region, RegionValues> newRegionValues = new HashMap<>();
 		for (Unit u : lastSeenUnits) {
-			Region r = bwapi.getMap().getRegion(u.getTilePosition()); // TODO change to Position
+			Region r = bwapi.getMap().getRegion(u.getPosition());
 			if (r == null) {
 				// We must be in a non-region area
 				r = REGION_NONE;
@@ -833,10 +833,10 @@ public class ExtractStates implements BWAPIEventListener {
 				rv = new RegionValues();
 				newRegionValues.put(r, rv);
 			}
-			UnitType ut = bwapi.getUnitType(u.getTypeID());
+			UnitType ut = u.getType();
 			// Currently have no way of checking allies/enemies during a replay, count only
 			// current player's units as allied and all others as enemy
-			if (u.getPlayerID() == p.getID()) {
+			if (u.getPlayer().equals(p)) {
 				if (ut.isBuilding()) {
 					rv.buildingValue += ut.getMineralPrice() + ut.getGasPrice();
 				} else if (ut.isFlyer()) {
@@ -844,7 +844,7 @@ public class ExtractStates implements BWAPIEventListener {
 				} else {
 					rv.groundUnitValue += ut.getMineralPrice() + ut.getGasPrice();
 				}
-			} else if (!bwapi.getPlayer(u.getPlayerID()).isNeutral()) { // Exclude neutrals
+			} else if (!u.getPlayer().isNeutral()) { // Exclude neutrals
 				if (ut.isBuilding()) {
 					rv.enemyBuildingValue += ut.getMineralPrice() + ut.getGasPrice();
 				} else if (ut.isFlyer()) {
@@ -1046,7 +1046,7 @@ public class ExtractStates implements BWAPIEventListener {
 			mi.unitIdToLastActionFrameCached.put(unit.getID(), lastFrame);
 			// Look up new nextFrame
 			List<Object> data = new ArrayList<>();
-			data.add(mi.playerIdToPlayerReplayId.get(unit.getPlayerID()));
+			data.add(mi.playerIdToPlayerReplayId.get(unit.getPlayer().getID()));
 			data.add(unit.getReplayID());
 			data.add(currentFrame);
 			nextFrame = (int) dbc.queryFirstColumn(query, data);

@@ -40,12 +40,10 @@ public class DistanceMap {
 		for (BaseLocation bl : map.getBaseLocations()) {
 			// Broodwar/BWTA sometimes gives back non-buildable/non-walkable BaseLocations, or even
 			// ones outside the map bounds!
-			// TODO should probably check isValid
-			// TODO should probably use the centre rather than the position (top left)
-			if (map.isBuildable(bl.getPosition())) {
-				seeds.add(bl.getPosition());
+			if (map.isBuildable(bl.getCenter())) {
+				seeds.add(bl.getCenter());
 			} else {
-				LOGGER.warning("Base location outside map bounds! " + bl.getPosition());
+				LOGGER.warning("Base location " + bl.getCenter() + " is not buildable");
 			}
 		}
 		baseLocationDistMap = floodFillDistances(seeds);
@@ -53,10 +51,11 @@ public class DistanceMap {
 		// calculate distance map for start locations
 		seeds.clear();
 		for (BaseLocation bl : map.getBaseLocations()) {
-			// TODO should probably check isBuildable and isValid
 			if (bl.isStartLocation()) {
-				// TODO should probably use the centre rather than the position (top left)
-				seeds.add(bl.getPosition());
+				if (map.isBuildable(bl.getCenter())) {
+					seeds.add(bl.getCenter());
+					// No need to log warning, will already be logged for base locations above
+				}
 			}
 		}
 		startLocationDistMap = floodFillDistances(seeds);

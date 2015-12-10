@@ -43,11 +43,11 @@ public class ExtractActions {
 	
 	public static void main(String[] args) {
 		// Start the logger
-		LogManager.initialise();
+		LogManager.initialise("ExtractActions");
 		try {
 			ExtractActions ea = new ExtractActions();
 			ea.start();
-		} catch (IOException e) {
+		} catch (IOException | SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
@@ -81,7 +81,8 @@ public class ExtractActions {
 	}
 	
 	/** Start the Extractor. This returns only once finished. */
-	public void start() {
+	public void start() throws IOException, SQLException {
+		DbConnection dbc = new DbConnection();
 		// Read the actions from all replay files in the folder
 		// Then add them all to the database
 		for (File f : replays) {
@@ -106,12 +107,13 @@ public class ExtractActions {
 				removeNonBwapiActions(replay);
 				// Remove selects again now that more actions are removed
 				removeExtraSelects(replay);
-				storeToDatabase(replay, f.getName(), winner);
+				storeToDatabase(dbc, replay, f.getName(), winner);
 			} else {
 				LOGGER.warning("The replay '" + f.getAbsolutePath() + "' could not be loaded.");
 			}
 		}
 		cleanupExtraUnitGroups();
+		dbc.close();
 		LOGGER.info("Done");
 	}
 	
@@ -155,7 +157,7 @@ public class ExtractActions {
 						} else {
 							selectedUnitIds.addAll(controlGroups.get(groupNum).unitIds);
 							if (selectedUnitIds.isEmpty()) {
-								LOGGER.warning("Skipped selecting empty control group:" + groupNum);
+								LOGGER.info("Skipped selecting empty control group:" + groupNum);
 								skip = true;
 								// Note this won't catch the case where a control group is full of
 								// dead units and is selected. In game there will be no effect but
@@ -339,8 +341,8 @@ public class ExtractActions {
 		}
 	}
 	
-	private void storeToDatabase(Replay replay, String fileName, Player winner) {
-		try (DbConnection dbc = new DbConnection();) {
+	private void storeToDatabase(DbConnection dbc, Replay replay, String fileName, Player winner) {
+		try {
 			List<Object> data = new ArrayList<>();
 			Set<Long> allDbPlayerReplayIds = new HashSet<>();
 			// Add Replay
@@ -485,11 +487,7 @@ public class ExtractActions {
 			dbc.findRemoveExtras("playerreplayid", "playerreplay",
 					"replayid=? AND playername<>'Neutral'", replayId, allDbPlayerReplayIds,
 					maxNumExtrasToRemove);
-			
-			dbc.close();
 		} catch (SQLException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage(), e);
-		} catch (IOException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
@@ -519,9 +517,7 @@ public class ExtractActions {
 					LOGGER.warning("Found orphaned unitgroups: " + Util.join(orphans));
 				}
 			}
-		} catch (SQLException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage(), e);
-		} catch (IOException e) {
+		} catch (SQLException | IOException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
