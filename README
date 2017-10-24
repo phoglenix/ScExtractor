@@ -4,6 +4,7 @@ It uses modified parts of Andras Belicza's Replay Parser to parse replay files, 
 By combining replay file parsing and attribute recording through BWAPI, this extractor is able to get a much more complete picture of the replay than others.
 
 The dataset extracted using this software can be found at https://www.cs.auckland.ac.nz/research/gameai/projects.php
+A mirror of the datasets is also available: https://drive.google.com/drive/folders/0BzdheFrwyAvsam1jUWRKWnRPeTA
 
 To run:
 0. Install Starcraft and BWAPI 3.7. Have a set of replay files to extract.
